@@ -133,7 +133,10 @@
             <input type="hidden" id="a-id">
             <div class="space-y-4 mb-6">
                 <input type="text" id="a-name" placeholder="Accessory Name" class="w-full p-3 border rounded-lg bg-zinc-50 font-bold">
-                <input type="text" id="a-image" placeholder="Main Image Path (If no variants)" class="w-full p-3 border rounded-lg bg-zinc-50 text-sm">
+                
+                <div id="a-main-img-container">
+                    <input type="text" id="a-image" placeholder="Main Image Path (If no variants)" class="w-full p-3 border rounded-lg bg-zinc-50 text-sm">
+                </div>
                 
                 <div>
                     <label class="text-[10px] font-bold text-zinc-500 uppercase">Cost $</label>
@@ -145,11 +148,13 @@
                     <label class="text-sm font-bold text-amber-800">Limited Edition</label>
                 </div>
 
-                <div class="pt-2">
-                    <label class="text-xs font-bold text-zinc-500 uppercase mb-2 block">Color Variants (Binders)</label>
-                    <div id="a-variants-container" class="space-y-2 bg-zinc-50 p-2 rounded-lg border border-zinc-200 min-h-[50px]"></div>
-                    <button type="button" onclick="addVariantLine()" class="mt-2 text-xs bg-zinc-200 text-zinc-700 font-bold py-2 px-3 rounded-lg w-full">+ Add Color Variant</button>
+                <div class="flex items-center gap-2 bg-zinc-100 p-3 rounded-lg border border-zinc-200 mt-4">
+                    <input type="checkbox" id="a-has-variants" onchange="toggleVariantsUI()" class="w-5 h-5 cursor-pointer">
+                    <label class="text-sm font-bold text-zinc-800">Has Color Variants?</label>
                 </div>
+
+                <div id="a-predefined-variants" class="hidden mt-2 border border-zinc-200 rounded-lg bg-zinc-50 p-3 space-y-3">
+                    </div>
             </div>
             <button onclick="saveAccessory()" class="w-full bg-amber-600 text-white font-bold py-3 rounded-lg mb-4">Save Accessory</button>
             <button id="btn-del-accessory" onclick="deleteAccessory()" class="w-full bg-red-50 text-red-600 border border-red-200 font-black py-3 rounded-lg hidden">DELETE ACCESSORY</button>
@@ -189,6 +194,35 @@
         let allData = { orders: {}, pokemon: {}, accessories: {} };
         let currentSortedPokemon = [];
         let currentSortedAccessories = [];
+
+        // 🎨 PREDEFINED BRAND COLORS
+        const PREDEFINED_COLORS = [
+            { name: 'Black', hex: '#2d2d2d' },
+            { name: 'Blue', hex: '#0072bc' },
+            { name: 'Green', hex: '#22c55e' },
+            { name: 'Pink', hex: '#e89fa1' },
+            { name: 'Purple', hex: '#6547a0' },
+            { name: 'Red', hex: '#ed1941' },
+            { name: 'Turquoise', hex: '#76e5cf' },
+            { name: 'Yellow', hex: '#ffde17' }
+        ];
+
+        // Inject colors into the DOM
+        function initColors() {
+            const container = document.getElementById('a-predefined-variants');
+            let html = '<p class="text-[10px] font-bold text-zinc-400 uppercase mb-2">Tick available colors</p>';
+            PREDEFINED_COLORS.forEach((color, i) => {
+                html += `
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="v-cb-${i}" class="w-5 h-5 cursor-pointer rounded border-zinc-300" onchange="toggleColorInput(${i})">
+                    <div class="w-6 h-6 rounded-full shadow-sm border border-zinc-200" style="background-color: ${color.hex};"></div>
+                    <label class="text-sm font-bold text-zinc-700 w-16">${color.name}</label>
+                    <input type="text" id="v-img-${i}" class="flex-1 p-2 text-xs border border-zinc-300 rounded-lg bg-white hidden focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Image Path (e.g. images/${color.name.toLowerCase()}.webp)">
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+        initColors();
 
         auth.onAuthStateChanged(user => {
             document.getElementById('loading-section').classList.add('hidden');
@@ -231,19 +265,17 @@
             let arr = collection === 'inventory_sealed' ? currentSortedPokemon : currentSortedAccessories;
             let swapIndex = currentIndex + direction;
 
-            if (swapIndex < 0 || swapIndex >= arr.length) return; // Top or bottom hit
+            if (swapIndex < 0 || swapIndex >= arr.length) return; 
 
             let item1 = arr[currentIndex];
             let item2 = arr[swapIndex];
 
-            // Assign safe sequential sort orders if they are messy
             let sort1 = item1.sortOrder !== undefined ? item1.sortOrder : currentIndex;
             let sort2 = item2.sortOrder !== undefined ? item2.sortOrder : swapIndex;
 
             if (sort1 === sort2) { sort1 = currentIndex; sort2 = swapIndex; }
 
             try {
-                // Swap them directly in Firebase
                 await db.collection(collection).doc(item1.id).update({ sortOrder: sort2 });
                 await db.collection(collection).doc(item2.id).update({ sortOrder: sort1 });
             } catch (e) {
@@ -478,7 +510,7 @@
         // POKEMON
         function openPokemonModal(id = null) {
             document.getElementById('p-id').value = id || '';
-            const data = id ? allData.pokemon[id] : { name: '', image: '', cost: '', stock: 0, sortOrder: 99, isComingSoon: false, releaseDate: '' };
+            const data = id ? allData.pokemon[id] : { name: '', image: '', cost: '', stock: 0, isComingSoon: false, releaseDate: '' };
             
             document.getElementById('p-name').value = data.name;
             document.getElementById('p-image').value = data.image;
@@ -504,11 +536,9 @@
             if(!payload.name || !payload.image) return alert("Needs Name and Image Path!");
 
             if(id) {
-                // Keep sortOrder the same when editing
                 payload.sortOrder = allData.pokemon[id].sortOrder || 99;
                 await db.collection('inventory_sealed').doc(id).set(payload);
             } else {
-                // New item goes to the bottom of the list
                 payload.sortOrder = currentSortedPokemon.length;
                 await db.collection('inventory_sealed').add(payload);
             }
@@ -521,31 +551,54 @@
             }, "Delete Item", true);
         }
 
-        // ACCESSORIES
-        function addVariantLine(color = '#000000', img = '') {
-            document.getElementById('a-variants-container').insertAdjacentHTML('beforeend', `
-                <div class="flex gap-2 variant-line mb-2 items-center">
-                    <input type="color" class="v-color w-10 h-10 rounded border-none cursor-pointer" value="${color}">
-                    <input type="text" class="v-img flex-1 p-3 text-xs border rounded-lg bg-white" placeholder="Path (e.g. images/red.webp)" value="${img}">
-                    <button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-black px-2 text-xl">&times;</button>
-                </div>
-            `);
+        // ACCESSORY - NEW COLOR LOGIC
+        function toggleVariantsUI() {
+            const hasVars = document.getElementById('a-has-variants').checked;
+            document.getElementById('a-predefined-variants').classList.toggle('hidden', !hasVars);
+            document.getElementById('a-main-img-container').classList.toggle('hidden', hasVars);
+        }
+
+        function toggleColorInput(i) {
+            const isChecked = document.getElementById(`v-cb-${i}`).checked;
+            const imgInput = document.getElementById(`v-img-${i}`);
+            if(isChecked) {
+                imgInput.classList.remove('hidden');
+            } else {
+                imgInput.classList.add('hidden');
+                imgInput.value = '';
+            }
         }
 
         function openAccessoryModal(id = null) {
             document.getElementById('a-id').value = id || '';
-            const data = id ? allData.accessories[id] : { name: '', image: '', cost: '', sortOrder: 99, isLimited: false, variants: [] };
+            const data = id ? allData.accessories[id] : { name: '', image: '', cost: '', isLimited: false, variants: [] };
             
             document.getElementById('a-name').value = data.name;
             document.getElementById('a-image').value = data.image || '';
             document.getElementById('a-cost').value = data.cost;
             document.getElementById('a-limited').checked = data.isLimited;
             
-            document.getElementById('a-variants-container').innerHTML = '';
-            if(data.variants && data.variants.length > 0) {
-                data.variants.forEach(v => addVariantLine(v.color, v.image));
-            } else {
-                if(!id) addVariantLine();
+            // Reset Predefined Checklist
+            PREDEFINED_COLORS.forEach((_, i) => {
+                document.getElementById(`v-cb-${i}`).checked = false;
+                document.getElementById(`v-img-${i}`).value = '';
+                document.getElementById(`v-img-${i}`).classList.add('hidden');
+            });
+
+            // Populate Checkboxes if they exist
+            const hasVariants = data.variants && data.variants.length > 0;
+            document.getElementById('a-has-variants').checked = hasVariants;
+            toggleVariantsUI();
+
+            if(hasVariants) {
+                data.variants.forEach(v => {
+                    const index = PREDEFINED_COLORS.findIndex(c => c.hex.toLowerCase() === v.color.toLowerCase());
+                    if(index !== -1) {
+                        document.getElementById(`v-cb-${index}`).checked = true;
+                        document.getElementById(`v-img-${index}`).value = v.image;
+                        document.getElementById(`v-img-${index}`).classList.remove('hidden');
+                    }
+                });
             }
             
             document.getElementById('btn-del-accessory').classList.toggle('hidden', !id);
@@ -554,20 +607,37 @@
 
         async function saveAccessory() {
             const id = document.getElementById('a-id').value;
+            const hasVariants = document.getElementById('a-has-variants').checked;
+            const mainImage = document.getElementById('a-image').value.trim();
+
             const payload = {
                 name: document.getElementById('a-name').value,
-                image: document.getElementById('a-image').value,
                 cost: Number(document.getElementById('a-cost').value),
                 isLimited: document.getElementById('a-limited').checked,
                 variants: []
             };
 
-            document.querySelectorAll('.variant-line').forEach(l => {
-                const img = l.querySelector('.v-img').value.trim();
-                if(img) payload.variants.push({ color: l.querySelector('.v-color').value, image: img });
-            });
-
             if(!payload.name) return alert("Needs a Name!");
+
+            // Check variant logic
+            if (hasVariants) {
+                let validImages = true;
+                PREDEFINED_COLORS.forEach((color, i) => {
+                    if (document.getElementById(`v-cb-${i}`).checked) {
+                        const imgPath = document.getElementById(`v-img-${i}`).value.trim();
+                        if (!imgPath) validImages = false;
+                        else payload.variants.push({ color: color.hex, image: imgPath });
+                    }
+                });
+                
+                if(!validImages) return alert("Please type an image path for all selected colors.");
+                if(payload.variants.length === 0) return alert("Please select at least one color variant.");
+                
+                payload.image = payload.variants[0].image; // fallback main image
+            } else {
+                if(!mainImage) return alert("Needs a Main Image Path!");
+                payload.image = mainImage;
+            }
 
             if(id) {
                 payload.sortOrder = allData.accessories[id].sortOrder || 99;
