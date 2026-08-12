@@ -109,9 +109,8 @@
                 <input type="text" id="p-image" placeholder="Image Path (e.g. images/box.webp)" class="w-full p-3 border rounded-lg bg-zinc-50 text-sm">
                 
                 <div class="flex gap-2">
-                    <div class="w-1/3"><label class="text-[10px] font-bold text-zinc-500 uppercase">Cost $</label><input type="number" id="p-cost" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
-                    <div class="w-1/3"><label class="text-[10px] font-bold text-zinc-500 uppercase">Stock Qty</label><input type="number" id="p-stock" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
-                    <div class="w-1/3"><label class="text-[10px] font-bold text-zinc-500 uppercase">Sort Order</label><input type="number" id="p-sort" placeholder="1" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
+                    <div class="w-1/2"><label class="text-[10px] font-bold text-zinc-500 uppercase">Cost $</label><input type="number" id="p-cost" class="w-full p-3 border rounded-lg bg-zinc-50 font-bold"></div>
+                    <div class="w-1/2"><label class="text-[10px] font-bold text-zinc-500 uppercase">Stock Qty</label><input type="number" id="p-stock" class="w-full p-3 border rounded-lg bg-zinc-50 font-bold"></div>
                 </div>
 
                 <div class="flex items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2">
@@ -136,9 +135,9 @@
                 <input type="text" id="a-name" placeholder="Accessory Name" class="w-full p-3 border rounded-lg bg-zinc-50 font-bold">
                 <input type="text" id="a-image" placeholder="Main Image Path (If no variants)" class="w-full p-3 border rounded-lg bg-zinc-50 text-sm">
                 
-                <div class="flex gap-2">
-                    <div class="w-1/2"><label class="text-[10px] font-bold text-zinc-500 uppercase">Cost $</label><input type="number" id="a-cost" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
-                    <div class="w-1/2"><label class="text-[10px] font-bold text-zinc-500 uppercase">Sort Order</label><input type="number" id="a-sort" placeholder="1" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
+                <div>
+                    <label class="text-[10px] font-bold text-zinc-500 uppercase">Cost $</label>
+                    <input type="number" id="a-cost" class="w-full p-3 border rounded-lg bg-zinc-50 font-bold">
                 </div>
 
                 <div class="flex items-center gap-2 bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2">
@@ -188,6 +187,8 @@
         const auth = firebase.auth();
 
         let allData = { orders: {}, pokemon: {}, accessories: {} };
+        let currentSortedPokemon = [];
+        let currentSortedAccessories = [];
 
         auth.onAuthStateChanged(user => {
             document.getElementById('loading-section').classList.add('hidden');
@@ -204,7 +205,6 @@
         function login() { auth.signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('password').value).catch(e => alert(e.message)); }
         function logout() { auth.signOut(); }
 
-        // --- TAB SWITCHER ---
         function switchAdminTab(tab) {
             ['orders', 'pokemon', 'accessories'].forEach(t => {
                 document.getElementById(`tab-${t}`).className = "flex-1 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500";
@@ -214,7 +214,6 @@
             document.getElementById(`view-${tab}`).classList.remove('hidden');
         }
 
-        // --- LOAD EVERYTHING ---
         function formatEtaDate(dateString) {
             if (!dateString || dateString === 'TBA') return 'TBA';
             const parts = dateString.split('-');
@@ -225,6 +224,31 @@
             const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
             const getOrdinal = (n) => { if (n > 3 && n < 21) return 'th'; switch (n % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; } };
             return `${days[d.getDay()]}, ${d.getDate()}${getOrdinal(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}`;
+        }
+
+        // --- ARROW LOGIC (SWAP SORT ORDERS) ---
+        async function moveItem(collection, currentIndex, direction) {
+            let arr = collection === 'inventory_sealed' ? currentSortedPokemon : currentSortedAccessories;
+            let swapIndex = currentIndex + direction;
+
+            if (swapIndex < 0 || swapIndex >= arr.length) return; // Top or bottom hit
+
+            let item1 = arr[currentIndex];
+            let item2 = arr[swapIndex];
+
+            // Assign safe sequential sort orders if they are messy
+            let sort1 = item1.sortOrder !== undefined ? item1.sortOrder : currentIndex;
+            let sort2 = item2.sortOrder !== undefined ? item2.sortOrder : swapIndex;
+
+            if (sort1 === sort2) { sort1 = currentIndex; sort2 = swapIndex; }
+
+            try {
+                // Swap them directly in Firebase
+                await db.collection(collection).doc(item1.id).update({ sortOrder: sort2 });
+                await db.collection(collection).doc(item2.id).update({ sortOrder: sort1 });
+            } catch (e) {
+                alert("Error moving item: " + e.message);
+            }
         }
 
         function loadAllData() {
@@ -277,20 +301,25 @@
                 let html = '';
                 let arr = [];
                 snap.forEach(doc => { arr.push({id: doc.id, ...doc.data()}); allData.pokemon[doc.id] = doc.data(); });
-                arr.sort((a, b) => (a.sortOrder || 99) - (b.sortOrder || 99));
+                arr.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                currentSortedPokemon = arr;
 
-                arr.forEach(data => {
+                arr.forEach((data, index) => {
                     const badge = data.isComingSoon ? '🟡 Coming Soon' : (data.stock <= 0 ? '🔴 Out of Stock' : `🟢 ${data.stock} in stock`);
                     html += `
                     <div class="bg-white p-3 rounded-xl shadow-sm border border-zinc-200 flex justify-between items-center">
-                        <div class="flex gap-3 items-center">
+                        <div class="flex flex-col gap-1 pr-3 border-r border-zinc-100">
+                            <button onclick="moveItem('inventory_sealed', ${index}, -1)" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-400 text-xs px-2 py-1 rounded shadow-sm">▲</button>
+                            <button onclick="moveItem('inventory_sealed', ${index}, 1)" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-400 text-xs px-2 py-1 rounded shadow-sm">▼</button>
+                        </div>
+                        <div class="flex gap-3 items-center flex-1 pl-3">
                             <img src="${data.image}" class="w-10 h-10 object-cover rounded bg-zinc-100 border">
                             <div>
                                 <p class="font-black text-sm text-zinc-800 leading-tight">${data.name}</p>
                                 <p class="text-[10px] font-bold text-zinc-500">${badge} | $${data.cost}</p>
                             </div>
                         </div>
-                        <button onclick="openPokemonModal('${data.id}')" class="bg-zinc-200 px-3 py-1.5 rounded text-xs font-bold">Edit</button>
+                        <button onclick="openPokemonModal('${data.id}')" class="bg-zinc-200 px-3 py-1.5 rounded text-xs font-bold ml-2">Edit</button>
                     </div>`;
                 });
                 document.getElementById('pokemon-list').innerHTML = html || '<p class="text-zinc-500 text-center bg-white p-4 rounded-xl">No Pokemon added yet.</p>';
@@ -302,21 +331,26 @@
                 let html = '';
                 let arr = [];
                 snap.forEach(doc => { arr.push({id: doc.id, ...doc.data()}); allData.accessories[doc.id] = doc.data(); });
-                arr.sort((a, b) => (a.sortOrder || 99) - (b.sortOrder || 99));
+                arr.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                currentSortedAccessories = arr;
 
-                arr.forEach(data => {
+                arr.forEach((data, index) => {
                     const vars = data.variants ? data.variants.length : 0;
                     const img = vars > 0 ? data.variants[0].image : data.image;
                     html += `
                     <div class="bg-white p-3 rounded-xl shadow-sm border border-zinc-200 flex justify-between items-center">
-                        <div class="flex gap-3 items-center">
+                        <div class="flex flex-col gap-1 pr-3 border-r border-zinc-100">
+                            <button onclick="moveItem('inventory_accessories', ${index}, -1)" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-400 text-xs px-2 py-1 rounded shadow-sm">▲</button>
+                            <button onclick="moveItem('inventory_accessories', ${index}, 1)" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-400 text-xs px-2 py-1 rounded shadow-sm">▼</button>
+                        </div>
+                        <div class="flex gap-3 items-center flex-1 pl-3">
                             <img src="${img}" class="w-10 h-10 object-cover rounded bg-zinc-100 border">
                             <div>
                                 <p class="font-black text-sm text-zinc-800 leading-tight">${data.name}</p>
                                 <p class="text-[10px] font-bold text-zinc-500">${data.isLimited ? '⭐ Limited' : 'Standard'} | $${data.cost} | ${vars} Vars</p>
                             </div>
                         </div>
-                        <button onclick="openAccessoryModal('${data.id}')" class="bg-zinc-200 px-3 py-1.5 rounded text-xs font-bold">Edit</button>
+                        <button onclick="openAccessoryModal('${data.id}')" class="bg-zinc-200 px-3 py-1.5 rounded text-xs font-bold ml-2">Edit</button>
                     </div>`;
                 });
                 document.getElementById('accessories-list').innerHTML = html || '<p class="text-zinc-500 text-center bg-white p-4 rounded-xl">No Accessories added yet.</p>';
@@ -450,7 +484,6 @@
             document.getElementById('p-image').value = data.image;
             document.getElementById('p-cost').value = data.cost;
             document.getElementById('p-stock').value = data.stock;
-            document.getElementById('p-sort').value = data.sortOrder || 99;
             document.getElementById('p-coming').checked = data.isComingSoon;
             document.getElementById('p-release').value = data.releaseDate || '';
             
@@ -465,14 +498,20 @@
                 image: document.getElementById('p-image').value,
                 cost: Number(document.getElementById('p-cost').value),
                 stock: Number(document.getElementById('p-stock').value),
-                sortOrder: Number(document.getElementById('p-sort').value),
                 isComingSoon: document.getElementById('p-coming').checked,
                 releaseDate: document.getElementById('p-release').value
             };
             if(!payload.name || !payload.image) return alert("Needs Name and Image Path!");
 
-            if(id) await db.collection('inventory_sealed').doc(id).set(payload);
-            else await db.collection('inventory_sealed').add(payload);
+            if(id) {
+                // Keep sortOrder the same when editing
+                payload.sortOrder = allData.pokemon[id].sortOrder || 99;
+                await db.collection('inventory_sealed').doc(id).set(payload);
+            } else {
+                // New item goes to the bottom of the list
+                payload.sortOrder = currentSortedPokemon.length;
+                await db.collection('inventory_sealed').add(payload);
+            }
             closeModal('modal-pokemon');
         }
         async function deletePokemon() { 
@@ -500,14 +539,12 @@
             document.getElementById('a-name').value = data.name;
             document.getElementById('a-image').value = data.image || '';
             document.getElementById('a-cost').value = data.cost;
-            document.getElementById('a-sort').value = data.sortOrder || 99;
             document.getElementById('a-limited').checked = data.isLimited;
             
             document.getElementById('a-variants-container').innerHTML = '';
             if(data.variants && data.variants.length > 0) {
                 data.variants.forEach(v => addVariantLine(v.color, v.image));
             } else {
-                // Add a blank one by default if it's new
                 if(!id) addVariantLine();
             }
             
@@ -521,7 +558,6 @@
                 name: document.getElementById('a-name').value,
                 image: document.getElementById('a-image').value,
                 cost: Number(document.getElementById('a-cost').value),
-                sortOrder: Number(document.getElementById('a-sort').value),
                 isLimited: document.getElementById('a-limited').checked,
                 variants: []
             };
@@ -533,8 +569,13 @@
 
             if(!payload.name) return alert("Needs a Name!");
 
-            if(id) await db.collection('inventory_accessories').doc(id).set(payload);
-            else await db.collection('inventory_accessories').add(payload);
+            if(id) {
+                payload.sortOrder = allData.accessories[id].sortOrder || 99;
+                await db.collection('inventory_accessories').doc(id).set(payload);
+            } else {
+                payload.sortOrder = currentSortedAccessories.length;
+                await db.collection('inventory_accessories').add(payload);
+            }
             closeModal('modal-accessory');
         }
         
