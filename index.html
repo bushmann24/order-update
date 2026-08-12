@@ -6,17 +6,17 @@
     <meta name="theme-color" content="#f4f4f5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>Order Admin</title>
+    <title>Store CMS</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
 </head>
-<body class="bg-zinc-100 p-4 md:p-8 font-sans pb-20">
+<body class="bg-zinc-100 p-4 md:p-8 font-sans pb-24">
 
     <div class="max-w-xl mx-auto">
-        <h1 class="text-2xl md:text-3xl font-black text-zinc-800 mb-6 text-center md:text-left">Order Admin</h1>
+        <h1 class="text-2xl md:text-3xl font-black text-zinc-800 mb-4 text-center md:text-left">Store Admin</h1>
 
         <div id="loading-section" class="flex flex-col items-center justify-center py-20">
             <div class="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
@@ -31,107 +31,129 @@
             <button onclick="login()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg w-full transition-colors">Sign In</button>
         </div>
 
-        <div id="admin-section" class="hidden space-y-6">
+        <div id="admin-section" class="hidden">
             
-            <div class="bg-white p-5 md:p-6 rounded-xl shadow-md border-t-4 border-emerald-500">
-                <h2 class="font-bold mb-4 text-lg md:text-xl text-emerald-600">Create New Order</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="text-xs font-bold text-zinc-500 uppercase">Public Name</label>
-                        <input type="text" id="new-name" placeholder="e.g. July Order 01" class="w-full p-3 border rounded-lg bg-zinc-50 mt-1">
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-zinc-500 uppercase">Estimated ETA</label>
-                        <input type="date" id="new-eta" class="w-full p-3 border rounded-lg bg-zinc-50 mt-1">
-                    </div>
-                </div>
-
-                <div class="mb-5">
-                    <label class="text-xs font-bold text-zinc-500 uppercase mb-2 block">Products Included</label>
-                    <div id="products-container" class="space-y-2">
-                        <div class="flex gap-2 product-line">
-                            <input type="text" placeholder="e.g. Gem Vol 4" class="product-input flex-1 p-3 border rounded-lg bg-zinc-50 text-sm">
-                            <button type="button" onclick="removeProductLine(this)" class="bg-red-100 text-red-600 px-4 rounded-lg font-bold hover:bg-red-200">✕</button>
-                        </div>
-                    </div>
-                    <button type="button" onclick="addProductLine()" class="mt-3 text-sm bg-zinc-200 hover:bg-zinc-300 text-zinc-700 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-1 transition-colors w-full md:w-auto">
-                        <span>+</span> Add Another Product
-                    </button>
-                </div>
-
-                <button onclick="createOrder()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 px-4 rounded-lg w-full transition-colors shadow-sm">Create Order</button>
+            <div class="flex gap-2 bg-zinc-300 p-1 rounded-xl mb-6 shadow-inner">
+                <button id="tab-orders" onclick="switchAdminTab('orders')" class="flex-1 py-2.5 text-sm font-black rounded-lg transition-all bg-white text-zinc-900 shadow-sm">Orders</button>
+                <button id="tab-pokemon" onclick="switchAdminTab('pokemon')" class="flex-1 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500">Pokemon</button>
+                <button id="tab-accessories" onclick="switchAdminTab('accessories')" class="flex-1 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500">Accessories</button>
             </div>
 
-            <div id="orders-list" class="space-y-4">
-                <p class="text-zinc-500 text-center font-bold animate-pulse">Loading orders...</p>
+            <div id="view-orders" class="space-y-6 block">
+                <div class="bg-white p-5 rounded-xl shadow-md border-t-4 border-emerald-500">
+                    <button onclick="openOrderModal()" class="w-full bg-emerald-500 text-white font-black py-3 rounded-lg">+ Create New Order</button>
+                </div>
+                <div id="orders-list" class="space-y-4"></div>
+            </div>
+
+            <div id="view-pokemon" class="space-y-6 hidden">
+                <div class="bg-white p-5 rounded-xl shadow-md border-t-4 border-red-500">
+                    <button onclick="openPokemonModal()" class="w-full bg-red-500 text-white font-black py-3 rounded-lg">+ Add Pokemon Box</button>
+                </div>
+                <div id="pokemon-list" class="space-y-3"></div>
+            </div>
+
+            <div id="view-accessories" class="space-y-6 hidden">
+                <div class="bg-white p-5 rounded-xl shadow-md border-t-4 border-amber-500">
+                    <button onclick="openAccessoryModal()" class="w-full bg-amber-500 text-white font-black py-3 rounded-lg">+ Add Accessory</button>
+                </div>
+                <div id="accessories-list" class="space-y-3"></div>
             </div>
             
             <button onclick="logout()" class="text-sm text-zinc-500 hover:text-zinc-800 underline mt-8 block mx-auto py-4">Logout</button>
         </div>
     </div>
 
-    <div id="edit-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 z-50">
-        <div class="bg-white rounded-t-2xl md:rounded-xl shadow-2xl p-5 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto border-t-4 border-blue-500 animate-fade-in-up">
+    <div id="modal-order" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 z-50">
+        <div class="bg-white rounded-t-2xl md:rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto border-t-4 border-emerald-500 animate-fade-in-up">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl md:text-2xl font-black text-zinc-800">Edit Order</h2>
-                <button onclick="closeEditModal()" class="text-zinc-400 hover:text-zinc-800 text-2xl font-black px-2">&times;</button>
+                <h2 id="order-modal-title" class="text-xl font-black text-zinc-800">Order</h2>
+                <button onclick="closeModal('modal-order')" class="text-zinc-400 text-2xl font-black">&times;</button>
             </div>
-            
-            <input type="hidden" id="edit-id">
-            
+            <input type="hidden" id="o-id">
             <div class="space-y-4 mb-6">
-                <div>
-                    <label class="block text-xs font-bold text-zinc-500 uppercase">Public Name</label>
-                    <input type="text" id="edit-name" class="w-full p-3 border rounded-lg bg-zinc-50 mt-1 font-bold">
+                <input type="text" id="o-name" placeholder="Public Name" class="w-full p-3 border rounded-lg bg-zinc-50 font-bold">
+                <div class="flex gap-2">
+                    <input type="date" id="o-eta" class="w-1/2 p-3 border rounded-lg bg-zinc-50 font-bold text-sm">
+                    <select id="o-status" class="w-1/2 p-3 border rounded-lg bg-zinc-50 font-bold text-sm">
+                        <option value="Preparing">Preparing</option>
+                        <option value="Shipped">Shipped</option>
+                        <option value="In Transit">In Transit</option>
+                        <option value="Customs">Customs</option>
+                        <option value="AusPost Hub">AusPost Hub</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
+                        <option value="Delivered">Delivered</option>
+                    </select>
                 </div>
+                <textarea id="o-products" class="w-full p-3 border rounded-lg bg-zinc-50 font-bold text-sm" rows="2" placeholder="Products (comma separated)"></textarea>
                 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-zinc-500 uppercase">Estimated ETA</label>
-                        <input type="date" id="edit-eta" class="w-full p-3 border rounded-lg bg-zinc-50 mt-1 font-bold">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-zinc-500 uppercase">Current Status Badge</label>
-                        <select id="edit-status" class="w-full p-3 border rounded-lg bg-zinc-50 mt-1 font-bold text-sm">
-                            <option value="Preparing">Preparing</option>
-                            <option value="Shipped">Shipped</option>
-                            <option value="In Transit">In Transit</option>
-                            <option value="Customs">Customs</option>
-                            <option value="AusPost Hub">AusPost Hub</option>
-                            <option value="Out for Delivery">Out for Delivery</option>
-                            <option value="Delivered">Delivered</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-xs font-bold text-zinc-500 uppercase">Products (Comma Separated)</label>
-                    <textarea id="edit-products" class="w-full p-3 border rounded-lg bg-zinc-50 mt-1 font-bold text-sm" rows="2" placeholder="Item 1, Item 2"></textarea>
-                </div>
-
-                <div class="pt-2">
+                <div id="o-timeline-wrapper" class="pt-2 hidden">
                     <label class="block text-xs font-bold text-zinc-500 uppercase mb-2">Edit Timeline History</label>
-                    <div id="edit-updates-container" class="space-y-2 bg-zinc-50 p-2 rounded-lg border border-zinc-200">
-                        </div>
+                    <div id="o-timeline" class="space-y-2 bg-zinc-50 p-2 rounded-lg border border-zinc-200"></div>
                 </div>
             </div>
-            
-            <button onclick="saveEditOrder()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg transition-colors shadow-md mb-4">Save Changes</button>
-
-            <div class="pt-4 border-t-2 border-red-100 border-dashed">
-                <button onclick="deleteOrder()" class="w-full bg-red-50 hover:bg-red-500 hover:text-white text-red-600 border border-red-200 font-black py-3 rounded-lg transition-all">
-                    DELETE ORDER
-                </button>
-            </div>
+            <button onclick="saveOrder()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg mb-4">Save Order</button>
+            <button id="btn-del-order" onclick="deleteOrder()" class="w-full bg-red-50 text-red-600 border border-red-200 font-black py-3 rounded-lg hidden">DELETE ORDER PERMANENTLY</button>
         </div>
     </div>
 
-    <div id="custom-alert" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm border-t-4 border-blue-500 text-center animate-fade-in-up">
-            <h3 id="alert-title" class="text-lg font-black text-zinc-800 mb-2">Notice</h3>
-            <p id="alert-message" class="text-sm text-zinc-600 mb-6"></p>
-            <button onclick="closeAlert()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-lg transition-colors w-full">OK</button>
+    <div id="modal-pokemon" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 z-50">
+        <div class="bg-white rounded-t-2xl md:rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto border-t-4 border-red-500 animate-fade-in-up">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-black text-zinc-800">Pokemon Box</h2>
+                <button onclick="closeModal('modal-pokemon')" class="text-zinc-400 text-2xl font-black">&times;</button>
+            </div>
+            <input type="hidden" id="p-id">
+            <div class="space-y-4 mb-6">
+                <input type="text" id="p-name" placeholder="Item Name" class="w-full p-3 border rounded-lg bg-zinc-50 font-bold">
+                <input type="text" id="p-image" placeholder="Image Path (e.g. images/box.webp)" class="w-full p-3 border rounded-lg bg-zinc-50 text-sm">
+                
+                <div class="flex gap-2">
+                    <div class="w-1/3"><label class="text-[10px] font-bold text-zinc-500 uppercase">Cost $</label><input type="number" id="p-cost" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
+                    <div class="w-1/3"><label class="text-[10px] font-bold text-zinc-500 uppercase">Stock Qty</label><input type="number" id="p-stock" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
+                    <div class="w-1/3"><label class="text-[10px] font-bold text-zinc-500 uppercase">Sort Order</label><input type="number" id="p-sort" placeholder="1" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
+                </div>
+
+                <div class="flex items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100 mt-2">
+                    <input type="checkbox" id="p-coming" class="w-5 h-5">
+                    <label class="text-sm font-bold text-blue-800 flex-1">Mark as "Coming Soon"</label>
+                    <input type="text" id="p-release" placeholder="Release Date (TBA)" class="w-1/2 p-2 border rounded text-xs bg-white">
+                </div>
+            </div>
+            <button onclick="savePokemon()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg mb-4">Save Item</button>
+            <button id="btn-del-pokemon" onclick="deletePokemon()" class="w-full bg-red-50 text-red-600 border border-red-200 font-black py-3 rounded-lg hidden">DELETE ITEM</button>
+        </div>
+    </div>
+
+    <div id="modal-accessory" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4 z-50">
+        <div class="bg-white rounded-t-2xl md:rounded-xl shadow-2xl p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto border-t-4 border-amber-500 animate-fade-in-up">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-black text-zinc-800">Accessory</h2>
+                <button onclick="closeModal('modal-accessory')" class="text-zinc-400 text-2xl font-black">&times;</button>
+            </div>
+            <input type="hidden" id="a-id">
+            <div class="space-y-4 mb-6">
+                <input type="text" id="a-name" placeholder="Accessory Name" class="w-full p-3 border rounded-lg bg-zinc-50 font-bold">
+                <input type="text" id="a-image" placeholder="Main Image Path (If no variants)" class="w-full p-3 border rounded-lg bg-zinc-50 text-sm">
+                
+                <div class="flex gap-2">
+                    <div class="w-1/2"><label class="text-[10px] font-bold text-zinc-500 uppercase">Cost $</label><input type="number" id="a-cost" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
+                    <div class="w-1/2"><label class="text-[10px] font-bold text-zinc-500 uppercase">Sort Order</label><input type="number" id="a-sort" placeholder="1" class="w-full p-2 border rounded-lg bg-zinc-50 font-bold"></div>
+                </div>
+
+                <div class="flex items-center gap-2 bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2">
+                    <input type="checkbox" id="a-limited" class="w-5 h-5">
+                    <label class="text-sm font-bold text-amber-800">Limited Edition</label>
+                </div>
+
+                <div class="pt-2">
+                    <label class="text-xs font-bold text-zinc-500 uppercase mb-2 block">Color Variants (Binders)</label>
+                    <div id="a-variants-container" class="space-y-2 bg-zinc-50 p-2 rounded-lg border border-zinc-200 min-h-[50px]"></div>
+                    <button type="button" onclick="addVariantLine()" class="mt-2 text-xs bg-zinc-200 text-zinc-700 font-bold py-2 px-3 rounded-lg w-full">+ Add Color Variant</button>
+                </div>
+            </div>
+            <button onclick="saveAccessory()" class="w-full bg-amber-600 text-white font-bold py-3 rounded-lg mb-4">Save Accessory</button>
+            <button id="btn-del-accessory" onclick="deleteAccessory()" class="w-full bg-red-50 text-red-600 border border-red-200 font-black py-3 rounded-lg hidden">DELETE ACCESSORY</button>
         </div>
     </div>
 
@@ -147,82 +169,12 @@
     </div>
 
     <style>
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fadeInUp 0.2s ease-out forwards; }
     </style>
 
     <script>
-        // 📅 CUSTOM DATE FORMATTER (Translates YYYY-MM-DD to "Thur, 6th AUG 2026")
-        function formatEtaDate(dateString) {
-            if (!dateString || dateString === 'TBA') return 'TBA';
-            const parts = dateString.split('-');
-            if (parts.length !== 3) return dateString; 
-            const d = new Date(parts[0], parts[1] - 1, parts[2]);
-            if (isNaN(d)) return dateString;
-
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'];
-            const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-            
-            const dayName = days[d.getDay()];
-            const monthName = months[d.getMonth()];
-            const dateNum = d.getDate();
-            const year = d.getFullYear();
-
-            const getOrdinal = (n) => {
-                if (n > 3 && n < 21) return 'th';
-                switch (n % 10) {
-                    case 1:  return "st";
-                    case 2:  return "nd";
-                    case 3:  return "rd";
-                    default: return "th";
-                }
-            };
-
-            return `${dayName}, ${dateNum}${getOrdinal(dateNum)} ${monthName} ${year}`;
-        }
-
-        // --- CUSTOM MODAL CONTROLLERS ---
-        function showCustomAlert(message, title = "Notice", color = "blue") {
-            document.getElementById('alert-title').innerText = title;
-            document.getElementById('alert-message').innerText = message;
-            document.getElementById('custom-alert').firstElementChild.className = `bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm border-t-4 border-${color}-500 text-center animate-fade-in-up`;
-            document.getElementById('custom-alert').classList.remove('hidden');
-        }
-        function closeAlert() { document.getElementById('custom-alert').classList.add('hidden'); }
-
-        let pendingConfirmCallback = null;
-        function showCustomConfirm(message, callback, title = "Confirm Action", isDanger = false) {
-            document.getElementById('confirm-title').innerText = title;
-            document.getElementById('confirm-message').innerText = message;
-            
-            const borderBox = document.getElementById('confirm-border');
-            const yesBtn = document.getElementById('confirm-yes-btn');
-            
-            if (isDanger) {
-                borderBox.className = "bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm border-t-4 border-red-600 text-center animate-fade-in-up";
-                yesBtn.className = "flex-1 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-lg transition-colors";
-            } else {
-                borderBox.className = "bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm border-t-4 border-blue-500 text-center animate-fade-in-up";
-                yesBtn.className = "flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-3 rounded-lg transition-colors";
-            }
-
-            pendingConfirmCallback = callback;
-            document.getElementById('custom-confirm').classList.remove('hidden');
-        }
-        
-        function closeConfirm(result) {
-            document.getElementById('custom-confirm').classList.add('hidden');
-            const callbackToRun = pendingConfirmCallback;
-            pendingConfirmCallback = null; 
-            if (result && callbackToRun) {
-                callbackToRun();
-            }
-        }
-
-        // 🛑 FIREBASE KEYS 🛑
+        // 🛑 PASTE YOUR FIREBASE KEYS HERE 🛑
         const firebaseConfig = {
             apiKey: "AIzaSyAHD0_l3t-aTEdlE_28Bspluk7KpL2GAbw",
             authDomain: "order-tracker-58390.firebaseapp.com",
@@ -235,334 +187,362 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        let allOrdersData = {};
+        let allData = { orders: {}, pokemon: {}, accessories: {} };
 
         auth.onAuthStateChanged(user => {
             document.getElementById('loading-section').classList.add('hidden');
             if (user) {
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('admin-section').classList.remove('hidden');
-                loadOrders();
+                loadAllData();
             } else {
                 document.getElementById('login-section').classList.remove('hidden');
                 document.getElementById('admin-section').classList.add('hidden');
             }
         });
 
-        function login() {
-            const e = document.getElementById('email').value;
-            const p = document.getElementById('password').value;
-            auth.signInWithEmailAndPassword(e, p).catch(err => {
-                document.getElementById('login-error').innerText = err.message;
-                document.getElementById('login-error').classList.remove('hidden');
-            });
-        }
-
+        function login() { auth.signInWithEmailAndPassword(document.getElementById('email').value, document.getElementById('password').value).catch(e => alert(e.message)); }
         function logout() { auth.signOut(); }
 
-        function addProductLine(value = '') {
-            const container = document.getElementById('products-container');
-            const div = document.createElement('div');
-            div.className = 'flex gap-2 product-line';
-            div.innerHTML = `
-                <input type="text" placeholder="e.g. Gem Vol 5" value="${value}" class="product-input flex-1 p-3 border rounded-lg bg-zinc-50 text-sm">
-                <button type="button" onclick="removeProductLine(this)" class="bg-red-100 text-red-600 px-4 rounded-lg font-bold hover:bg-red-200">✕</button>
-            `;
-            container.appendChild(div);
+        // --- TAB SWITCHER ---
+        function switchAdminTab(tab) {
+            ['orders', 'pokemon', 'accessories'].forEach(t => {
+                document.getElementById(`tab-${t}`).className = "flex-1 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500";
+                document.getElementById(`view-${t}`).classList.add('hidden');
+            });
+            document.getElementById(`tab-${tab}`).className = "flex-1 py-2.5 text-sm font-black rounded-lg transition-all bg-white text-zinc-900 shadow-sm";
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
         }
 
-        function removeProductLine(btn) {
-            const container = document.getElementById('products-container');
-            if (container.querySelectorAll('.product-line').length > 1) {
-                btn.closest('.product-line').remove();
-            } else {
-                btn.previousElementSibling.value = '';
-            }
+        // --- LOAD EVERYTHING ---
+        function formatEtaDate(dateString) {
+            if (!dateString || dateString === 'TBA') return 'TBA';
+            const parts = dateString.split('-');
+            if (parts.length !== 3) return dateString; 
+            const d = new Date(parts[0], parts[1] - 1, parts[2]);
+            if (isNaN(d)) return dateString;
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thur', 'Fri', 'Sat'];
+            const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+            const getOrdinal = (n) => { if (n > 3 && n < 21) return 'th'; switch (n % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; } };
+            return `${days[d.getDay()]}, ${d.getDate()}${getOrdinal(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}`;
         }
 
-        async function createOrder() {
-            const name = document.getElementById('new-name').value;
-            const eta = document.getElementById('new-eta').value;
-            
-            const productInputs = document.querySelectorAll('.product-input');
-            const productList = Array.from(productInputs).map(i => i.value.trim()).filter(v => v);
-
-            if (!name) return showCustomAlert("Public name is required to create an order.", "Missing Details", "red");
-
-            const newOrderRef = db.collection('orders_public').doc(); 
-
-            try {
-                await newOrderRef.set({
-                    name: name,
-                    eta: eta || "TBA",
-                    status: "Preparing",
-                    products: productList,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updates: [{ date: new Date().toLocaleDateString(), msg: "Order placed and preparing." }]
-                });
-
-                showCustomAlert("Order successfully created.", "Success", "emerald");
-                document.getElementById('new-name').value = '';
-                document.getElementById('new-eta').value = '';
-                document.getElementById('products-container').innerHTML = `
-                    <div class="flex gap-2 product-line">
-                        <input type="text" placeholder="e.g. Gem Vol 4" class="product-input flex-1 p-3 border rounded-lg bg-zinc-50 text-sm">
-                        <button type="button" onclick="removeProductLine(this)" class="bg-red-100 text-red-600 px-4 rounded-lg font-bold hover:bg-red-200">✕</button>
-                    </div>
-                `;
-                loadOrders();
-            } catch (error) {
-                showCustomAlert("Error saving order: " + error.message, "System Error", "red");
-            }
-        }
-
-        async function loadOrders() {
-            const list = document.getElementById('orders-list');
-            try {
-                const publicSnap = await db.collection('orders_public').get();
+        function loadAllData() {
+            // Orders
+            db.collection('orders_public').onSnapshot(snap => {
+                allData.orders = {};
+                let html = '';
+                let arr = [];
+                snap.forEach(doc => { arr.push({id: doc.id, ...doc.data()}); allData.orders[doc.id] = doc.data(); });
+                arr.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
                 
-                if (publicSnap.empty) {
-                    list.innerHTML = '<p class="text-center text-zinc-500 mt-4 bg-white p-6 rounded-xl shadow-sm border border-zinc-200">No active orders found.</p>';
-                    return;
-                }
+                arr.forEach(data => {
+                    let statusColor = "bg-blue-100 text-blue-800";
+                    if(data.status === "Delivered") statusColor = "bg-emerald-100 text-emerald-800";
+                    if(data.status === "Preparing") statusColor = "bg-amber-100 text-amber-800";
 
-                let ordersArray = [];
-                publicSnap.forEach(doc => ordersArray.push({ id: doc.id, ...doc.data() }));
-                
-                ordersArray.sort((a, b) => {
-                    let timeA = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : 0;
-                    let timeB = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0;
-                    return timeB - timeA;
-                });
-
-                list.innerHTML = '';
-                allOrdersData = {}; 
-
-                for (let pubData of ordersArray) {
-                    allOrdersData[pubData.id] = {
-                        name: pubData.name,
-                        eta: pubData.eta,
-                        status: pubData.status || 'Preparing',
-                        products: pubData.products || [],
-                        updates: pubData.updates || [] // Now storing updates locally
-                    };
-
-                    let updatesHTML = pubData.updates ? pubData.updates.map(u => `<li class="text-xs text-zinc-600 border-l-2 border-blue-500 pl-2 ml-2 my-1"><span class="font-bold">${u.date}:</span> ${u.msg}</li>`).join('') : '';
-                    let productsHTML = pubData.products && pubData.products.length > 0 ? pubData.products.join(', ') : 'None';
-
-                    list.innerHTML += `
-                        <div class="bg-white p-4 md:p-5 rounded-xl shadow-sm border border-zinc-200">
-                            <div class="flex justify-between items-start mb-3">
-                                <div>
-                                    <h3 class="font-black text-lg text-zinc-800">${pubData.name}</h3>
-                                    <p class="text-xs font-bold text-zinc-500">ETA: <span class="text-zinc-800">${formatEtaDate(pubData.eta)}</span></p>
-                                </div>
-                                <span class="bg-blue-100 text-blue-700 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md shadow-sm">${pubData.status || "Unknown"}</span>
+                    html += `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-zinc-200">
+                        <div class="flex justify-between items-start mb-2 border-b border-zinc-100 pb-2">
+                            <div>
+                                <h3 class="font-black text-lg text-zinc-800">${data.name}</h3>
+                                <p class="text-xs font-bold text-zinc-500">ETA: <span class="text-zinc-800">${formatEtaDate(data.eta)}</span></p>
                             </div>
-                            
-                            <div class="bg-zinc-50 p-2 rounded-lg mb-3 border border-zinc-100">
-                                <p class="text-[9px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Products Included:</p>
-                                <p class="text-xs text-zinc-800 font-bold">${productsHTML}</p>
-                            </div>
-
-                            <div class="mb-4">
-                                <p class="text-[9px] font-bold text-zinc-400 uppercase tracking-wider mb-1">Timeline</p>
-                                <ul class="space-y-1">${updatesHTML}</ul>
-                            </div>
-                            
-                            <p class="text-[9px] font-bold text-zinc-400 uppercase mb-2">Update Status</p>
-                            <div class="flex flex-wrap gap-2 mb-3">
-                                <button onclick="addQuickUpdate('${pubData.id}', 'Preparing order for shipment.', 'Preparing')" class="bg-zinc-200 hover:bg-zinc-300 text-zinc-800 font-bold px-3 py-2 rounded-lg text-xs flex-grow md:flex-grow-0">Preparing</button>
-                                <button onclick="addQuickUpdate('${pubData.id}', 'Shipped from China.', 'Shipped')" class="bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold px-3 py-2 rounded-lg text-xs flex-grow md:flex-grow-0">Shipped</button>
-                                <button onclick="addQuickUpdate('${pubData.id}', 'In transit to Australia.', 'In Transit')" class="bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold px-3 py-2 rounded-lg text-xs flex-grow md:flex-grow-0">In Transit</button>
-                                <button onclick="addQuickUpdate('${pubData.id}', 'Undergoing customs clearance.', 'Customs')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-3 py-2 rounded-lg text-xs flex-grow md:flex-grow-0">Customs</button>
-                                <button onclick="addQuickUpdate('${pubData.id}', 'Arrived at AusPost Facility.', 'AusPost Hub')" class="bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold px-3 py-2 rounded-lg text-xs flex-grow md:flex-grow-0">AusPost</button>
-                                <button onclick="addQuickUpdate('${pubData.id}', 'Out for delivery with AusPost.', 'Out for Delivery')" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-3 py-2 rounded-lg text-xs flex-grow md:flex-grow-0">On The Way</button>
-                                <button onclick="addQuickUpdate('${pubData.id}', 'Delivered and ready for sale!', 'Delivered')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-3 py-2 rounded-lg text-xs w-full md:w-auto mt-1 md:mt-0">Delivered</button>
-                            </div>
-
-                            <div class="flex flex-col md:flex-row gap-2 border-t border-zinc-100 pt-3">
-                                <button onclick="openEditModal('${pubData.id}')" class="flex-1 text-xs bg-zinc-800 text-white font-bold px-3 py-2.5 rounded-lg hover:bg-zinc-700 shadow-sm transition-colors text-center">
-                                    Edit Order & Timeline
-                                </button>
-                                <button onclick="undoLastUpdate('${pubData.id}')" class="flex-1 text-xs bg-red-50 text-red-600 border border-red-200 font-bold px-3 py-2.5 rounded-lg hover:bg-red-100 transition-colors text-center">
-                                    ↩ Undo Update
-                                </button>
-                            </div>
+                            <span class="${statusColor} text-[10px] font-black uppercase px-2 py-1 rounded shadow-sm">${data.status || 'Preparing'}</span>
                         </div>
-                    `;
-                }
-            } catch (error) {
-                list.innerHTML = `<p class="text-center text-red-500 font-bold mt-4">Error loading orders: ${error.message}</p>`;
-            }
-        }
-
-        function addQuickUpdate(docId, msg, statusStr) {
-            showCustomConfirm(`Update status to "${statusStr}" and push update to live tracking?`, async () => {
-                try {
-                    const docRef = db.collection('orders_public').doc(docId);
-                    const updateData = {
-                        status: statusStr,
-                        updates: firebase.firestore.FieldValue.arrayUnion({
-                            date: new Date().toLocaleDateString(),
-                            msg: msg
-                        })
-                    };
-                    if (statusStr === "Delivered") {
-                        updateData.deliveredDate = new Date().toLocaleDateString();
-                    }
-                    await docRef.update(updateData);
-                    loadOrders();
-                } catch (error) {
-                    showCustomAlert("Error posting update: " + error.message, "Update Failed", "red");
-                }
-            }, "Confirm Update");
-        }
-
-        async function undoLastUpdate(docId) {
-            showCustomConfirm("Delete the most recent timeline update?", async () => {
-                try {
-                    const docRef = db.collection('orders_public').doc(docId);
-                    const doc = await docRef.get();
-                    if (!doc.exists) return;
-                    
-                    const data = doc.data();
-                    
-                    if (data.updates && data.updates.length > 1) {
-                        data.updates.pop(); 
                         
-                        const lastMsg = data.updates[data.updates.length - 1].msg || "";
-                        let revertedStatus = "Preparing"; 
-                        
-                        if (lastMsg.includes("Shipped")) revertedStatus = "Shipped";
-                        else if (lastMsg.includes("In transit")) revertedStatus = "In Transit";
-                        else if (lastMsg.includes("customs")) revertedStatus = "Customs";
-                        else if (lastMsg.includes("AusPost Facility")) revertedStatus = "AusPost Hub";
-                        else if (lastMsg.includes("Out for delivery")) revertedStatus = "Out for Delivery";
-                        else if (lastMsg.includes("Delivered")) revertedStatus = "Delivered";
-
-                        const updatePayload = {
-                            updates: data.updates,
-                            status: revertedStatus
-                        };
-                        
-                        if (data.deliveredDate && revertedStatus !== "Delivered") {
-                            updatePayload.deliveredDate = firebase.firestore.FieldValue.delete();
-                        }
-
-                        await docRef.update(updatePayload);
-                        loadOrders();
-                    } else {
-                        showCustomAlert("You cannot delete the very first creation update.", "Action Denied", "amber");
-                    }
-                } catch (error) {
-                    showCustomAlert("Error undoing update: " + error.message, "System Error", "red");
-                }
-            }, "Undo Last Update", true);
-        }
-
-        // ⏱️ POPULATE EDIT MODAL WITH TIMELINE DATA
-        function openEditModal(id) {
-            const data = allOrdersData[id];
-            document.getElementById('edit-id').value = id;
-            document.getElementById('edit-name').value = data.name || '';
-            document.getElementById('edit-eta').value = data.eta === 'TBA' ? '' : (data.eta || '');
-            
-            const statusSelect = document.getElementById('edit-status');
-            if (Array.from(statusSelect.options).some(opt => opt.value === data.status)) {
-                statusSelect.value = data.status;
-            } else {
-                statusSelect.value = "Preparing"; 
-            }
-
-            document.getElementById('edit-products').value = (data.products || []).join(', ');
-
-            // Populate Timeline Editor
-            const updatesContainer = document.getElementById('edit-updates-container');
-            updatesContainer.innerHTML = '';
-            
-            if (data.updates && data.updates.length > 0) {
-                data.updates.forEach(u => {
-                    updatesContainer.innerHTML += `
-                        <div class="flex gap-2 update-line items-center">
-                            <input type="text" class="update-date w-28 p-2 border border-zinc-200 rounded text-xs font-bold text-zinc-700" value="${u.date}" placeholder="Date">
-                            <input type="text" class="update-msg flex-1 p-2 border border-zinc-200 rounded text-xs text-zinc-700" value="${u.msg}" placeholder="Message">
-                            <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 font-bold px-2 text-lg leading-none">&times;</button>
+                        <p class="text-[9px] font-bold text-zinc-400 uppercase mb-2">1-Click Quick Update</p>
+                        <div class="flex flex-wrap gap-1.5 mb-3">
+                            <button onclick="addQuickUpdate('${data.id}', 'Preparing order for shipment.', 'Preparing')" class="bg-zinc-200 text-zinc-800 font-bold px-2 py-1.5 rounded-md text-xs">Preparing</button>
+                            <button onclick="addQuickUpdate('${data.id}', 'Shipped from supplier.', 'Shipped')" class="bg-blue-100 text-blue-800 font-bold px-2 py-1.5 rounded-md text-xs">Shipped</button>
+                            <button onclick="addQuickUpdate('${data.id}', 'In transit to Australia.', 'In Transit')" class="bg-blue-100 text-blue-800 font-bold px-2 py-1.5 rounded-md text-xs">In Transit</button>
+                            <button onclick="addQuickUpdate('${data.id}', 'Undergoing customs clearance.', 'Customs')" class="bg-amber-100 text-amber-800 font-bold px-2 py-1.5 rounded-md text-xs">Customs</button>
+                            <button onclick="addQuickUpdate('${data.id}', 'Arrived at AusPost Facility.', 'AusPost Hub')" class="bg-purple-100 text-purple-800 font-bold px-2 py-1.5 rounded-md text-xs">AusPost Hub</button>
+                            <button onclick="addQuickUpdate('${data.id}', 'Out for delivery.', 'Out for Delivery')" class="bg-indigo-100 text-indigo-800 font-bold px-2 py-1.5 rounded-md text-xs">Out for Delivery</button>
+                            <button onclick="addQuickUpdate('${data.id}', 'Delivered and ready for sale!', 'Delivered')" class="bg-emerald-100 text-emerald-800 font-bold px-2 py-1.5 rounded-md text-xs">Delivered</button>
                         </div>
-                    `;
+
+                        <div class="flex gap-2">
+                            <button onclick="openOrderModal('${data.id}')" class="flex-1 text-xs bg-zinc-800 text-white font-bold py-2 rounded-lg">Full Edit / Timeline</button>
+                            <button onclick="undoLastUpdate('${data.id}')" class="text-xs bg-red-50 text-red-600 border border-red-200 font-bold px-3 py-2 rounded-lg">↩ Undo</button>
+                        </div>
+                    </div>`;
                 });
-            } else {
-                updatesContainer.innerHTML = '<p class="text-xs text-zinc-400 p-2">No updates recorded.</p>';
-            }
-
-            document.getElementById('edit-modal').classList.remove('hidden');
-        }
-
-        function closeEditModal() {
-            document.getElementById('edit-modal').classList.add('hidden');
-        }
-
-        async function saveEditOrder() {
-            const id = document.getElementById('edit-id').value;
-            const newName = document.getElementById('edit-name').value;
-            const newEta = document.getElementById('edit-eta').value;
-            const newStatus = document.getElementById('edit-status').value;
-            const productsRaw = document.getElementById('edit-products').value;
-
-            if (!newName) return showCustomAlert("Public name cannot be empty!", "Missing Details", "red");
-
-            const productList = productsRaw.split(',').map(p => p.trim()).filter(p => p);
-
-            // ⏱️ GATHER EDITED TIMELINE
-            const updateLines = document.querySelectorAll('.update-line');
-            let updatedTimeline = [];
-            updateLines.forEach(line => {
-                const d = line.querySelector('.update-date').value.trim();
-                const m = line.querySelector('.update-msg').value.trim();
-                if (d && m) {
-                    updatedTimeline.push({ date: d, msg: m });
-                }
+                document.getElementById('orders-list').innerHTML = html || '<p class="text-zinc-500 text-center bg-white p-4 rounded-xl">No active orders.</p>';
             });
 
-            try {
-                let updatePayload = {
-                    name: newName,
-                    eta: newEta || "TBA",
-                    status: newStatus,
-                    products: productList,
-                    updates: updatedTimeline
-                };
+            // Pokemon
+            db.collection('inventory_sealed').onSnapshot(snap => {
+                allData.pokemon = {};
+                let html = '';
+                let arr = [];
+                snap.forEach(doc => { arr.push({id: doc.id, ...doc.data()}); allData.pokemon[doc.id] = doc.data(); });
+                arr.sort((a, b) => (a.sortOrder || 99) - (b.sortOrder || 99));
 
-                // If marked delivered, sync the delivered date to the last timeline entry
-                if (newStatus === "Delivered" && updatedTimeline.length > 0) {
-                    updatePayload.deliveredDate = updatedTimeline[updatedTimeline.length - 1].date;
-                }
+                arr.forEach(data => {
+                    const badge = data.isComingSoon ? '🟡 Coming Soon' : (data.stock <= 0 ? '🔴 Out of Stock' : `🟢 ${data.stock} in stock`);
+                    html += `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-zinc-200 flex justify-between items-center">
+                        <div class="flex gap-3 items-center">
+                            <img src="${data.image}" class="w-10 h-10 object-cover rounded bg-zinc-100 border">
+                            <div>
+                                <p class="font-black text-sm text-zinc-800 leading-tight">${data.name}</p>
+                                <p class="text-[10px] font-bold text-zinc-500">${badge} | $${data.cost}</p>
+                            </div>
+                        </div>
+                        <button onclick="openPokemonModal('${data.id}')" class="bg-zinc-200 px-3 py-1.5 rounded text-xs font-bold">Edit</button>
+                    </div>`;
+                });
+                document.getElementById('pokemon-list').innerHTML = html || '<p class="text-zinc-500 text-center bg-white p-4 rounded-xl">No Pokemon added yet.</p>';
+            });
 
-                await db.collection('orders_public').doc(id).update(updatePayload);
+            // Accessories
+            db.collection('inventory_accessories').onSnapshot(snap => {
+                allData.accessories = {};
+                let html = '';
+                let arr = [];
+                snap.forEach(doc => { arr.push({id: doc.id, ...doc.data()}); allData.accessories[doc.id] = doc.data(); });
+                arr.sort((a, b) => (a.sortOrder || 99) - (b.sortOrder || 99));
 
-                showCustomAlert("Order and timeline updated successfully.", "Success", "emerald");
-                closeEditModal();
-                loadOrders();
-            } catch (error) {
-                showCustomAlert("Error updating order: " + error.message, "System Error", "red");
-            }
+                arr.forEach(data => {
+                    const vars = data.variants ? data.variants.length : 0;
+                    const img = vars > 0 ? data.variants[0].image : data.image;
+                    html += `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-zinc-200 flex justify-between items-center">
+                        <div class="flex gap-3 items-center">
+                            <img src="${img}" class="w-10 h-10 object-cover rounded bg-zinc-100 border">
+                            <div>
+                                <p class="font-black text-sm text-zinc-800 leading-tight">${data.name}</p>
+                                <p class="text-[10px] font-bold text-zinc-500">${data.isLimited ? '⭐ Limited' : 'Standard'} | $${data.cost} | ${vars} Vars</p>
+                            </div>
+                        </div>
+                        <button onclick="openAccessoryModal('${data.id}')" class="bg-zinc-200 px-3 py-1.5 rounded text-xs font-bold">Edit</button>
+                    </div>`;
+                });
+                document.getElementById('accessories-list').innerHTML = html || '<p class="text-zinc-500 text-center bg-white p-4 rounded-xl">No Accessories added yet.</p>';
+            });
         }
 
-        function deleteOrder() {
-            showCustomConfirm("This will erase the order from the public app permanently.", () => {
-                showCustomConfirm("FINAL WARNING: This action cannot be undone. Continue?", async () => {
-                    try {
-                        const id = document.getElementById('edit-id').value;
-                        await db.collection('orders_public').doc(id).delete();
-                        
-                        showCustomAlert("Order permanently deleted.", "Deleted", "emerald");
-                        closeEditModal();
-                        loadOrders(); 
-                    } catch (error) {
-                        showCustomAlert("Error deleting order: " + error.message, "System Error", "red");
-                    }
-                }, "Permanent Deletion", true);
-            }, "Confirm Deletion", true);
+        // --- CUSTOM CONFIRM ---
+        let pendingConfirmCallback = null;
+        function showCustomConfirm(message, callback, title = "Confirm", isDanger = false) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-message').innerText = message;
+            const borderBox = document.getElementById('confirm-border');
+            const yesBtn = document.getElementById('confirm-yes-btn');
+            
+            if (isDanger) {
+                borderBox.className = "bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm border-t-4 border-red-600 text-center animate-fade-in-up";
+                yesBtn.className = "flex-1 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-3 rounded-lg";
+            } else {
+                borderBox.className = "bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm border-t-4 border-blue-500 text-center animate-fade-in-up";
+                yesBtn.className = "flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-3 rounded-lg";
+            }
+            pendingConfirmCallback = callback;
+            document.getElementById('custom-confirm').classList.remove('hidden');
+        }
+        function closeConfirm(result) {
+            document.getElementById('custom-confirm').classList.add('hidden');
+            const cb = pendingConfirmCallback;
+            pendingConfirmCallback = null; 
+            if (result && cb) cb();
+        }
+
+        // --- MODAL ENGINE ---
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        // QUICK UPDATES & UNDO
+        function addQuickUpdate(docId, msg, statusStr) {
+            showCustomConfirm(`Update status to "${statusStr}"?`, async () => {
+                const docRef = db.collection('orders_public').doc(docId);
+                const updateData = { status: statusStr, updates: firebase.firestore.FieldValue.arrayUnion({ date: new Date().toLocaleDateString(), msg: msg }) };
+                if (statusStr === "Delivered") updateData.deliveredDate = new Date().toLocaleDateString();
+                await docRef.update(updateData);
+            });
+        }
+        async function undoLastUpdate(docId) {
+            showCustomConfirm("Delete the most recent timeline update?", async () => {
+                const docRef = db.collection('orders_public').doc(docId);
+                const doc = await docRef.get();
+                if (!doc.exists) return;
+                const data = doc.data();
+                if (data.updates && data.updates.length > 1) {
+                    data.updates.pop(); 
+                    const lastMsg = data.updates[data.updates.length - 1].msg || "";
+                    let revertedStatus = "Preparing"; 
+                    if (lastMsg.includes("Shipped")) revertedStatus = "Shipped";
+                    else if (lastMsg.includes("In transit")) revertedStatus = "In Transit";
+                    else if (lastMsg.includes("customs")) revertedStatus = "Customs";
+                    else if (lastMsg.includes("AusPost Facility")) revertedStatus = "AusPost Hub";
+                    else if (lastMsg.includes("Out for delivery")) revertedStatus = "Out for Delivery";
+                    else if (lastMsg.includes("Delivered")) revertedStatus = "Delivered";
+                    const updatePayload = { updates: data.updates, status: revertedStatus };
+                    if (data.deliveredDate && revertedStatus !== "Delivered") updatePayload.deliveredDate = firebase.firestore.FieldValue.delete();
+                    await docRef.update(updatePayload);
+                } else alert("Cannot delete the first update.");
+            }, "Undo", true);
+        }
+
+        // ORDERS
+        function openOrderModal(id = null) {
+            document.getElementById('o-id').value = id || '';
+            const data = id ? allData.orders[id] : { name: '', eta: '', status: 'Preparing', products: [], updates: [] };
+            
+            document.getElementById('order-modal-title').innerText = id ? 'Edit Order' : 'New Order';
+            document.getElementById('o-name').value = data.name;
+            document.getElementById('o-eta').value = data.eta === 'TBA' ? '' : (data.eta || '');
+            document.getElementById('o-status').value = data.status || 'Preparing';
+            document.getElementById('o-products').value = (data.products || []).join(', ');
+            
+            const tlWrap = document.getElementById('o-timeline-wrapper');
+            const tl = document.getElementById('o-timeline');
+            if (id && data.updates) {
+                tlWrap.classList.remove('hidden');
+                tl.innerHTML = data.updates.map(u => `
+                    <div class="flex gap-1 update-line mb-1 items-center">
+                        <input type="text" class="u-date w-24 p-2 text-xs font-bold border rounded-md" value="${u.date}">
+                        <input type="text" class="u-msg flex-1 p-2 text-xs border rounded-md" value="${u.msg}">
+                        <button onclick="this.parentElement.remove()" class="text-red-500 font-bold px-2 text-lg">&times;</button>
+                    </div>`).join('');
+            } else {
+                tlWrap.classList.add('hidden'); tl.innerHTML = '';
+            }
+            
+            document.getElementById('btn-del-order').classList.toggle('hidden', !id);
+            document.getElementById('modal-order').classList.remove('hidden');
+        }
+
+        async function saveOrder() {
+            const id = document.getElementById('o-id').value;
+            const payload = {
+                name: document.getElementById('o-name').value,
+                eta: document.getElementById('o-eta').value || "TBA",
+                status: document.getElementById('o-status').value,
+                products: document.getElementById('o-products').value.split(',').map(p=>p.trim()).filter(p=>p)
+            };
+            if(!payload.name) return alert("Needs a name!");
+
+            if(id) {
+                const uLines = document.querySelectorAll('.update-line');
+                payload.updates = Array.from(uLines).map(l => ({ date: l.querySelector('.u-date').value, msg: l.querySelector('.u-msg').value })).filter(u => u.date && u.msg);
+                if(payload.status === "Delivered" && payload.updates.length) payload.deliveredDate = payload.updates[payload.updates.length-1].date;
+                await db.collection('orders_public').doc(id).update(payload);
+            } else {
+                payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                payload.updates = [{ date: new Date().toLocaleDateString(), msg: "Order placed." }];
+                await db.collection('orders_public').add(payload);
+            }
+            closeModal('modal-order');
+        }
+        async function deleteOrder() { 
+            showCustomConfirm("This will permanently delete this order.", async () => {
+                await db.collection('orders_public').doc(document.getElementById('o-id').value).delete(); 
+                closeModal('modal-order');
+            }, "Delete Order", true);
+        }
+
+        // POKEMON
+        function openPokemonModal(id = null) {
+            document.getElementById('p-id').value = id || '';
+            const data = id ? allData.pokemon[id] : { name: '', image: '', cost: '', stock: 0, sortOrder: 99, isComingSoon: false, releaseDate: '' };
+            
+            document.getElementById('p-name').value = data.name;
+            document.getElementById('p-image').value = data.image;
+            document.getElementById('p-cost').value = data.cost;
+            document.getElementById('p-stock').value = data.stock;
+            document.getElementById('p-sort').value = data.sortOrder || 99;
+            document.getElementById('p-coming').checked = data.isComingSoon;
+            document.getElementById('p-release').value = data.releaseDate || '';
+            
+            document.getElementById('btn-del-pokemon').classList.toggle('hidden', !id);
+            document.getElementById('modal-pokemon').classList.remove('hidden');
+        }
+
+        async function savePokemon() {
+            const id = document.getElementById('p-id').value;
+            const payload = {
+                name: document.getElementById('p-name').value,
+                image: document.getElementById('p-image').value,
+                cost: Number(document.getElementById('p-cost').value),
+                stock: Number(document.getElementById('p-stock').value),
+                sortOrder: Number(document.getElementById('p-sort').value),
+                isComingSoon: document.getElementById('p-coming').checked,
+                releaseDate: document.getElementById('p-release').value
+            };
+            if(!payload.name || !payload.image) return alert("Needs Name and Image Path!");
+
+            if(id) await db.collection('inventory_sealed').doc(id).set(payload);
+            else await db.collection('inventory_sealed').add(payload);
+            closeModal('modal-pokemon');
+        }
+        async function deletePokemon() { 
+            showCustomConfirm("Permanently delete this Pokemon item?", async () => {
+                await db.collection('inventory_sealed').doc(document.getElementById('p-id').value).delete(); 
+                closeModal('modal-pokemon');
+            }, "Delete Item", true);
+        }
+
+        // ACCESSORIES
+        function addVariantLine(color = '#000000', img = '') {
+            document.getElementById('a-variants-container').insertAdjacentHTML('beforeend', `
+                <div class="flex gap-2 variant-line mb-2 items-center">
+                    <input type="color" class="v-color w-10 h-10 rounded border-none cursor-pointer" value="${color}">
+                    <input type="text" class="v-img flex-1 p-3 text-xs border rounded-lg bg-white" placeholder="Path (e.g. images/red.webp)" value="${img}">
+                    <button type="button" onclick="this.parentElement.remove()" class="text-red-500 font-black px-2 text-xl">&times;</button>
+                </div>
+            `);
+        }
+
+        function openAccessoryModal(id = null) {
+            document.getElementById('a-id').value = id || '';
+            const data = id ? allData.accessories[id] : { name: '', image: '', cost: '', sortOrder: 99, isLimited: false, variants: [] };
+            
+            document.getElementById('a-name').value = data.name;
+            document.getElementById('a-image').value = data.image || '';
+            document.getElementById('a-cost').value = data.cost;
+            document.getElementById('a-sort').value = data.sortOrder || 99;
+            document.getElementById('a-limited').checked = data.isLimited;
+            
+            document.getElementById('a-variants-container').innerHTML = '';
+            if(data.variants && data.variants.length > 0) {
+                data.variants.forEach(v => addVariantLine(v.color, v.image));
+            } else {
+                // Add a blank one by default if it's new
+                if(!id) addVariantLine();
+            }
+            
+            document.getElementById('btn-del-accessory').classList.toggle('hidden', !id);
+            document.getElementById('modal-accessory').classList.remove('hidden');
+        }
+
+        async function saveAccessory() {
+            const id = document.getElementById('a-id').value;
+            const payload = {
+                name: document.getElementById('a-name').value,
+                image: document.getElementById('a-image').value,
+                cost: Number(document.getElementById('a-cost').value),
+                sortOrder: Number(document.getElementById('a-sort').value),
+                isLimited: document.getElementById('a-limited').checked,
+                variants: []
+            };
+
+            document.querySelectorAll('.variant-line').forEach(l => {
+                const img = l.querySelector('.v-img').value.trim();
+                if(img) payload.variants.push({ color: l.querySelector('.v-color').value, image: img });
+            });
+
+            if(!payload.name) return alert("Needs a Name!");
+
+            if(id) await db.collection('inventory_accessories').doc(id).set(payload);
+            else await db.collection('inventory_accessories').add(payload);
+            closeModal('modal-accessory');
+        }
+        
+        async function deleteAccessory() { 
+            showCustomConfirm("Permanently delete this Accessory?", async () => {
+                await db.collection('inventory_accessories').doc(document.getElementById('a-id').value).delete(); 
+                closeModal('modal-accessory');
+            }, "Delete Accessory", true);
         }
     </script>
 </body>
