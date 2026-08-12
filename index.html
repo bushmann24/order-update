@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
     <meta name="theme-color" content="#f4f4f5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>Store CMS</title>
+    <meta name="apple-mobile-web-app-title" content="Admin">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
     
+    <title>Store CMS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
@@ -178,7 +182,7 @@
     </style>
 
     <script>
-        // 🛑 PASTE YOUR FIREBASE KEYS HERE 🛑
+        // 🛑 FIREBASE KEYS 🛑
         const firebaseConfig = {
             apiKey: "AIzaSyAHD0_l3t-aTEdlE_28Bspluk7KpL2GAbw",
             authDomain: "order-tracker-58390.firebaseapp.com",
@@ -207,16 +211,14 @@
             { name: 'Yellow', hex: '#ffde17' }
         ];
 
-        // 🚀 THE IMAGE RESOLVER ENGINE
-        // This ensures your admin app can see images that are hosted in your public repository
+        // 🚀 IMAGE RESOLVER ENGINE (Pulls images from Public Repo)
         function getFullImageUrl(path) {
             if (!path) return '';
             if (path.startsWith('http')) return path;
             const baseUrl = "https://raw.githubusercontent.com/jj-app/pokemon-stock/refs/heads/main/";
-            return baseUrl + path.replace(/^\//, ''); // Attaches the base URL and cleans up any double slashes
+            return baseUrl + path.replace(/^\//, ''); 
         }
 
-        // Inject colors into the DOM
         function initColors() {
             const container = document.getElementById('a-predefined-variants');
             let html = '<p class="text-[10px] font-bold text-zinc-400 uppercase mb-2">Tick available colors</p>';
@@ -287,9 +289,7 @@
             try {
                 await db.collection(collection).doc(item1.id).update({ sortOrder: sort2 });
                 await db.collection(collection).doc(item2.id).update({ sortOrder: sort1 });
-            } catch (e) {
-                alert("Error moving item: " + e.message);
-            }
+            } catch (e) { alert("Error moving item: " + e.message); }
         }
 
         function loadAllData() {
@@ -423,7 +423,6 @@
             if (result && cb) cb();
         }
 
-        // --- MODAL ENGINE ---
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
         // QUICK UPDATES & UNDO
@@ -560,7 +559,7 @@
             }, "Delete Item", true);
         }
 
-        // ACCESSORY - NEW COLOR LOGIC
+        // ACCESSORY - CHECKLIST LOGIC
         function toggleVariantsUI() {
             const hasVars = document.getElementById('a-has-variants').checked;
             document.getElementById('a-predefined-variants').classList.toggle('hidden', !hasVars);
@@ -570,12 +569,8 @@
         function toggleColorInput(i) {
             const isChecked = document.getElementById(`v-cb-${i}`).checked;
             const imgInput = document.getElementById(`v-img-${i}`);
-            if(isChecked) {
-                imgInput.classList.remove('hidden');
-            } else {
-                imgInput.classList.add('hidden');
-                imgInput.value = '';
-            }
+            if(isChecked) { imgInput.classList.remove('hidden'); } 
+            else { imgInput.classList.add('hidden'); imgInput.value = ''; }
         }
 
         function openAccessoryModal(id = null) {
@@ -587,14 +582,12 @@
             document.getElementById('a-cost').value = data.cost;
             document.getElementById('a-limited').checked = data.isLimited;
             
-            // Reset Predefined Checklist
             PREDEFINED_COLORS.forEach((_, i) => {
                 document.getElementById(`v-cb-${i}`).checked = false;
                 document.getElementById(`v-img-${i}`).value = '';
                 document.getElementById(`v-img-${i}`).classList.add('hidden');
             });
 
-            // Populate Checkboxes if they exist
             const hasVariants = data.variants && data.variants.length > 0;
             document.getElementById('a-has-variants').checked = hasVariants;
             toggleVariantsUI();
@@ -628,7 +621,6 @@
 
             if(!payload.name) return alert("Needs a Name!");
 
-            // Check variant logic
             if (hasVariants) {
                 let validImages = true;
                 PREDEFINED_COLORS.forEach((color, i) => {
@@ -642,7 +634,7 @@
                 if(!validImages) return alert("Please type an image path for all selected colors.");
                 if(payload.variants.length === 0) return alert("Please select at least one color variant.");
                 
-                payload.image = payload.variants[0].image; // fallback main image
+                payload.image = payload.variants[0].image; // fallback
             } else {
                 if(!mainImage) return alert("Needs a Main Image Path!");
                 payload.image = mainImage;
