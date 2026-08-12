@@ -207,6 +207,15 @@
             { name: 'Yellow', hex: '#ffde17' }
         ];
 
+        // 🚀 THE IMAGE RESOLVER ENGINE
+        // This ensures your admin app can see images that are hosted in your public repository
+        function getFullImageUrl(path) {
+            if (!path) return '';
+            if (path.startsWith('http')) return path;
+            const baseUrl = "https://raw.githubusercontent.com/jj-app/pokemon-stock/refs/heads/main/";
+            return baseUrl + path.replace(/^\//, ''); // Attaches the base URL and cleans up any double slashes
+        }
+
         // Inject colors into the DOM
         function initColors() {
             const container = document.getElementById('a-predefined-variants');
@@ -345,7 +354,7 @@
                             <button onclick="moveItem('inventory_sealed', ${index}, 1)" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-400 text-xs px-2 py-1 rounded shadow-sm">▼</button>
                         </div>
                         <div class="flex gap-3 items-center flex-1 pl-3">
-                            <img src="${data.image}" class="w-10 h-10 object-cover rounded bg-zinc-100 border">
+                            <img src="${getFullImageUrl(data.image)}" class="w-10 h-10 object-cover rounded bg-white border">
                             <div>
                                 <p class="font-black text-sm text-zinc-800 leading-tight">${data.name}</p>
                                 <p class="text-[10px] font-bold text-zinc-500">${badge} | $${data.cost}</p>
@@ -376,7 +385,7 @@
                             <button onclick="moveItem('inventory_accessories', ${index}, 1)" class="bg-zinc-100 hover:bg-zinc-200 text-zinc-400 text-xs px-2 py-1 rounded shadow-sm">▼</button>
                         </div>
                         <div class="flex gap-3 items-center flex-1 pl-3">
-                            <img src="${img}" class="w-10 h-10 object-cover rounded bg-zinc-100 border">
+                            <img src="${getFullImageUrl(img)}" class="w-10 h-10 object-cover rounded bg-white border">
                             <div>
                                 <p class="font-black text-sm text-zinc-800 leading-tight">${data.name}</p>
                                 <p class="text-[10px] font-bold text-zinc-500">${data.isLimited ? '⭐ Limited' : 'Standard'} | $${data.cost} | ${vars} Vars</p>
