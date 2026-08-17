@@ -21,7 +21,7 @@
 
     <div class="max-w-xl mx-auto">
         <div class="flex items-center justify-center md:justify-start pt-2 pb-6">
-            <img src="logo.webp" alt="Store Admin" class="h-10 md:h-12 w-auto object-contain drop-shadow-sm">
+            <img src="logo.webp" alt="Box Goblin Admin" class="h-[72px] md:h-20 w-auto object-contain drop-shadow-sm">
         </div>
 
         <div id="loading-section" class="flex flex-col items-center justify-center py-20">
@@ -39,10 +39,11 @@
 
         <div id="admin-section" class="hidden">
             
-            <div class="flex gap-2 bg-zinc-300 p-1 rounded-xl mb-6 shadow-inner">
-                <button id="tab-orders" onclick="switchAdminTab('orders')" class="flex-1 py-2.5 text-sm font-black rounded-lg transition-all bg-white text-zinc-900 shadow-sm">Orders</button>
-                <button id="tab-pokemon" onclick="switchAdminTab('pokemon')" class="flex-1 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500">Pokemon</button>
-                <button id="tab-accessories" onclick="switchAdminTab('accessories')" class="flex-1 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500">Accessories</button>
+            <div class="flex gap-2 bg-zinc-300 p-1 rounded-xl mb-6 shadow-inner overflow-x-auto overflow-y-hidden snap-x">
+                <button id="tab-orders" onclick="switchAdminTab('orders')" class="flex-shrink-0 px-4 py-2.5 text-sm font-black rounded-lg transition-all bg-white text-zinc-900 shadow-sm snap-start">Orders</button>
+                <button id="tab-pokemon" onclick="switchAdminTab('pokemon')" class="flex-shrink-0 px-4 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500 snap-start">Pokemon</button>
+                <button id="tab-accessories" onclick="switchAdminTab('accessories')" class="flex-shrink-0 px-4 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500 snap-start">Accessories</button>
+                <button id="tab-settings" onclick="switchAdminTab('settings')" class="flex-shrink-0 px-4 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500 snap-start">⚙️ Settings</button>
             </div>
 
             <div id="view-orders" class="space-y-6 block">
@@ -64,6 +65,23 @@
                     <button onclick="openAccessoryModal()" class="w-full bg-amber-500 text-white font-black py-3 rounded-lg">+ Add Accessory</button>
                 </div>
                 <div id="accessories-list" class="space-y-3"></div>
+            </div>
+
+            <div id="view-settings" class="space-y-6 hidden">
+                <div class="bg-white p-5 rounded-xl shadow-md border-t-4 border-blue-500 animate-fade-in-up">
+                    <h2 class="text-lg font-black text-zinc-800 mb-4">Store Announcement Banner</h2>
+                    <p class="text-xs font-bold text-zinc-500 mb-4">When turned on, this message will pin itself to the top of your public store.</p>
+                    
+                    <div class="flex items-center gap-2 bg-blue-50 p-3 rounded-lg border border-blue-100 mb-4">
+                        <input type="checkbox" id="setting-banner-active" class="w-5 h-5 cursor-pointer">
+                        <label class="text-sm font-bold text-blue-900 flex-1 cursor-pointer" onclick="document.getElementById('setting-banner-active').click()">Show Banner to Customers?</label>
+                    </div>
+                    
+                    <input type="text" id="setting-banner-heading" placeholder="Heading (e.g. Taking a short break!)" class="w-full p-3 border rounded-lg mb-3 bg-zinc-50 font-bold text-sm">
+                    <textarea id="setting-banner-message" placeholder="Message body..." class="w-full p-3 border rounded-lg mb-4 bg-zinc-50 text-sm font-medium" rows="4"></textarea>
+                    
+                    <button onclick="saveBannerSettings()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-lg transition-colors">Update Banner</button>
+                </div>
             </div>
             
             <button onclick="logout()" class="text-sm text-zinc-500 hover:text-zinc-800 underline mt-8 block mx-auto py-4">Logout</button>
@@ -213,7 +231,7 @@
             { name: 'Yellow', hex: '#ffde17' }
         ];
 
-        // 🚀 IMAGE RESOLVER ENGINE (Pulls images from Public Repo)
+        // 🚀 IMAGE RESOLVER ENGINE
         function getFullImageUrl(path) {
             if (!path) return '';
             if (path.startsWith('http')) return path;
@@ -253,12 +271,17 @@
         function logout() { auth.signOut(); }
 
         function switchAdminTab(tab) {
-            ['orders', 'pokemon', 'accessories'].forEach(t => {
-                document.getElementById(`tab-${t}`).className = "flex-1 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500";
-                document.getElementById(`view-${t}`).classList.add('hidden');
+            ['orders', 'pokemon', 'accessories', 'settings'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if(btn) btn.className = "flex-shrink-0 px-4 py-2.5 text-sm font-black rounded-lg transition-all text-zinc-500 snap-start";
+                const view = document.getElementById(`view-${t}`);
+                if(view) view.classList.add('hidden');
             });
-            document.getElementById(`tab-${tab}`).className = "flex-1 py-2.5 text-sm font-black rounded-lg transition-all bg-white text-zinc-900 shadow-sm";
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            if(activeBtn) activeBtn.className = "flex-shrink-0 px-4 py-2.5 text-sm font-black rounded-lg transition-all bg-white text-zinc-900 shadow-sm snap-start";
+            const activeView = document.getElementById(`view-${tab}`);
+            if(activeView) activeView.classList.remove('hidden');
         }
 
         function formatEtaDate(dateString) {
@@ -273,7 +296,6 @@
             return `${days[d.getDay()]}, ${d.getDate()}${getOrdinal(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}`;
         }
 
-        // --- ARROW LOGIC (SWAP SORT ORDERS) ---
         async function moveItem(collection, currentIndex, direction) {
             let arr = collection === 'inventory_sealed' ? currentSortedPokemon : currentSortedAccessories;
             let swapIndex = currentIndex + direction;
@@ -295,6 +317,20 @@
         }
 
         function loadAllData() {
+            // Settings Banner
+            db.collection('store_settings').doc('banner').onSnapshot(doc => {
+                if(doc.exists) {
+                    const data = doc.data();
+                    document.getElementById('setting-banner-active').checked = data.isActive || false;
+                    document.getElementById('setting-banner-heading').value = data.heading || '';
+                    document.getElementById('setting-banner-message').value = data.message || '';
+                } else {
+                    // Inject your default text so you don't have to type it out!
+                    document.getElementById('setting-banner-heading').value = "Taking a short break!";
+                    document.getElementById('setting-banner-message').value = "I am on holiday from Thursday, Aug 20th to Tuesday, Sept 1st. Feel free to browse the stock, but any replies or orders will be sorted as soon as I return. Thank you!";
+                }
+            });
+
             // Orders
             db.collection('orders_public').onSnapshot(snap => {
                 allData.orders = {};
@@ -398,6 +434,31 @@
                 });
                 document.getElementById('accessories-list').innerHTML = html || '<p class="text-zinc-500 text-center bg-white p-4 rounded-xl">No Accessories added yet.</p>';
             });
+        }
+
+        // 🚀 DYNAMIC BANNER SAVER
+        async function saveBannerSettings() {
+            const btn = event.target;
+            btn.innerText = "Saving...";
+            
+            const payload = {
+                isActive: document.getElementById('setting-banner-active').checked,
+                heading: document.getElementById('setting-banner-heading').value.trim() || 'Announcement',
+                message: document.getElementById('setting-banner-message').value.trim()
+            };
+            
+            try {
+                await db.collection('store_settings').doc('banner').set(payload);
+                btn.className = "w-full bg-emerald-500 text-white font-black py-3 rounded-lg transition-colors";
+                btn.innerText = "✓ Banner Updated";
+                setTimeout(() => {
+                    btn.className = "w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-lg transition-colors";
+                    btn.innerText = "Update Banner";
+                }, 2000);
+            } catch(e) {
+                alert("Error saving banner: " + e.message);
+                btn.innerText = "Update Banner";
+            }
         }
 
         // --- CUSTOM CONFIRM ---
